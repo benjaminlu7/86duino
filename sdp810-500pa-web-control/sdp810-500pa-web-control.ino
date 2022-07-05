@@ -45,7 +45,6 @@ Table of Content
 ========================================================================================================================================
 */
 byte *mac = Ethernet.localMAC();                      // Enter MAC Address of 86Duino (Educake)
-IPAddress ip(192, 168, 100, 49);                      // Enter Static IP Address of 86Duino (Educake)
 EthernetServer web_server(80);                        // Creating a Web Server Using Port 80
 
 String http_request;                                  // This will stored the http request
@@ -56,8 +55,14 @@ String http_request;                                  // This will stored the ht
 
 SensirionI2CSdp sdp;
 
-String name;
-String tagline;
+String name = keyString( F( "name" ) );
+String tagline = getTagline( F( "tagline" ) );
+int ip1 = keyNumber( F( "ip1" ) );
+int ip2 = keyNumber( F( "ip2" ) );
+int ip3 = keyNumber( F( "ip3" ) );
+int ip4 = keyNumber( F( "ip4" ) );
+
+IPAddress ip(ip1, ip2, ip3, ip4 );                      // Enter Static IP Address of 86Duino (Educake)
 
 
 
@@ -72,9 +77,6 @@ void setup() {
   Ethernet.begin(mac, ip);                            // Initializing Ethernet Communications
   web_server.begin();                                 // Start to Lisen for clients
   Serial.begin(9600);                                 // Open Serial Communications for Diagnostics
-
-  name    = keyString( F( "name" ) );
-  tagline = getTagline( F( "tagline" ) );
 
 
    Wire.begin();
@@ -372,4 +374,27 @@ String HELPER_ascii2String(char *ascii, int length) {
   }
 
   return str;
+}
+
+int keyNumber(const __FlashStringHelper * key) {
+  char value_string[VALUE_MAX_LENGTH];
+  int value_length = SD_findKey(key, value_string);
+  return HELPER_ascii2Int(value_string, value_length);
+}
+
+int HELPER_ascii2Int(char *ascii, int length) {
+  int sign = 1;
+  int number = 0;
+
+  for (int i = 0; i < length; i++) {
+    char c = *(ascii + i);
+    if (i == 0 && c == '-')
+      sign = -1;
+    else {
+      if (c >= '0' && c <= '9')
+        number = number * 10 + (c - '0');
+    }
+  }
+
+  return number * sign;
 }
