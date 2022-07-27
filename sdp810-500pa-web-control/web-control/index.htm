@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="profile" href="https://gmpg.org/xfn/11" />
+</head>
+<script>
+    function replace_element( targetElement, command ) {
+        nocache = "&nocache=" + Math.random() * 1000000;
+        var xmlhttp;
+        xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                var jsonObj = JSON.parse(xmlhttp.responseText);
+                document.getElementById(targetElement).innerHTML = jsonObj.value.toString();
+            }
+        }
+        xmlhttp.open("GET", command + nocache, true);
+        xmlhttp.send();
+    }
+
+    function customize_page() {
+				replace_element("title", "getTitle");
+				replace_element("a0", "getName1");
+			}
+</script>
+<body onload="customize_page()" style="background: #eeeeee; margin: 0; font-family: 'Arial'; padding: 0;">
+<div id="container" class="site-container" style="background: #ffffff; border: 0.063rem solid #cccccc; margin: 1.125rem auto; width: 1170px;">
+    <header class="site-header">
+        <h1 id="title" class="site-title" style="margin: 0; padding: 0">86Duino IDE</h1>
+    </header>
+</div>
+</body>
+</html>

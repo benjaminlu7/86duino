@@ -1,367 +1,236 @@
-/*
-========================================================================================================================================
-LED Lights (Web Control)
-========================================================================================================================================
-This tagline deals with LED Lights which is controlled by GPIO at pins 3, 4, and 5. It uses the 
-web server to control the LED from Off to On.
-@package        LED Light (Web Control)
-@copyright      Copyright (C) 2018. Benjamin Lu
-@license        GNU General Public License v2 or later (http://www.gnu.org/licenses/gpl-2.0.html)
-@author         Benjamin Lu (https://www.benjlu.com/)
-========================================================================================================================================
-*/
-
-/*
-========================================================================================================================================
-Table of Content
-========================================================================================================================================
- 1.0 - Required Files
- 2.0 - Variables
- 3.0 - Setup
- 4.0 - Loop
- 5.0 - redLED Checkbox
- 6.0 - yellowLED Checkbox
- 7.0 - greenLED Checkbox
-========================================================================================================================================
-*/
-
-/*
-========================================================================================================================================
- 1.0 - Required Files
-========================================================================================================================================
-*/
-#include <SPI.h>
 #include <Ethernet.h>
+#include <ArduinoMDNS.h>
 #include <SD.h>
-#include <Arduino.h>
-#include <SensirionI2CSdp.h>
-#include <Wire.h>
 
-
-
-/*
-========================================================================================================================================
- 2.0 - Variables
-========================================================================================================================================
-*/
-byte *mac = Ethernet.localMAC();                      // Enter MAC Address of 86Duino (Educake)
-EthernetServer web_server(80);                        // Creating a Web Server Using Port 80
-
-String http_request;                                  // This will stored the http request
+#define debug 1
+#define spi_flash 0
+#define dhcp 0
 
 #define CONFIG_FILE "config.txt"
 #define KEY_MAX_LENGTH 30
 #define VALUE_MAX_LENGTH 30
 
-SensirionI2CSdp sdp;
-
-String name = keyString( F( "name" ) );
-String tagline = getTagline( F( "tagline" ) );
-int ip1 = keyNumber( F( "ip1" ) );
-int ip2 = keyNumber( F( "ip2" ) );
-int ip3 = keyNumber( F( "ip3" ) );
-int ip4 = keyNumber( F( "ip4" ) );
-
-IPAddress ip(ip1, ip2, ip3, ip4 );                      // Enter Static IP Address of 86Duino (Educake)
+// size of buffer used to capture HTTP requests
+#define REQ_BUF_SZ   30
 
 
+EthernetServer server(80);
+FILE *fp;
+
+char HTTP_req[REQ_BUF_SZ] = {0}; 
+char req_index = 0;
+char spf[50];
+
+char * commands[] = { "getSensors", "getTitle", "getName1"};
+enum {getSensors, getTitle, getName1};
+const int commands_count=sizeof(commands)/sizeof(commands[0]);
+
+String name;
+
+void setup()
+{
+    Serial.begin(115200);   
+    pinMode(A0, INPUT) ;
+    pinMode(A1, INPUT) ;
+    
+    
+#if debug    
+// if debug mode waiting for Serial console 
+    while (!Serial) {;}
+// delay(2000);
+#endif
+
+#if spi_flash
+// show whether it's boot from SD or internal SPI flash
+  Serial.println("Run from SPI Flash");
+#else
+  Serial.println("Run from SD card");
+#endif
+
+#if dhcp
+  ;
+#else
+  byte ip[] = { 192, 168, 100, 147 };    
+#endif
+
+#if dhcp
+    Ethernet.begin();
+#else
+    Ethernet.begin(Ethernet.localMAC(), ip);
+#endif
+    server.begin();
+    Serial.print("Server is running at ip: ");       
+    Serial.println(Ethernet.localIP());     
 
 
 
-/*
-========================================================================================================================================
- 3.0 - Setup
-========================================================================================================================================
-*/
-void setup() {
-  Ethernet.begin(mac, ip);                            // Initializing Ethernet Communications
-  web_server.begin();                                 // Start to Lisen for clients
-  Serial.begin(9600);                                 // Open Serial Communications for Diagnostics
+    name = my_findString("name");
 
-
-   Wire.begin();
-
-    uint16_t error;
-    char errorMessage[256];
-
-    sdp.begin(Wire, SDP8XX_I2C_ADDRESS_0);
-
-    uint32_t productNumber;
-    uint8_t serialNumber[8];
-    uint8_t serialNumberSize = 8;
-
-    sdp.stopContinuousMeasurement();
-
-    error = sdp.readProductIdentifier(productNumber, serialNumber,
-                                      serialNumberSize);
-    if (error) {
-        Serial.print("Error trying to execute readProductIdentifier(): ");
-        errorToString(error, errorMessage, 256);
-        Serial.println(errorMessage);
-    } else {
-        Serial.print("ProductNumber:");
-        Serial.print(productNumber);
-        Serial.print("\t");
-        Serial.print("SerialNumber:");
-        Serial.print("0x");
-        for (size_t i = 0; i < serialNumberSize; i++) {
-            Serial.print(serialNumber[i], HEX);
-        }
-        Serial.println();
-    }
-
-    error = sdp.startContinuousMeasurementWithDiffPressureTCompAndAveraging();
-
-    if (error) {
-        Serial.print(
-            "Error trying to execute "
-            "startContinuousMeasurementWithDiffPressureTCompAndAveraging(): ");
-        errorToString(error, errorMessage, 256);
-        Serial.println(errorMessage);
-    }
+    Serial.println( name );
 }
 
-/*
-========================================================================================================================================
- 4.0 - Loop
-========================================================================================================================================
-*/
-void loop() { 
-  EthernetClient client = web_server.available();       // Try to get a client
+void loop()
+{
+    int cmd;
+    name = my_findString( "name" );
+    EthernetClient client = server.available();
 
-  if (client) {                                         // Got Client
-    boolean currentLineIsBlank = true;
+    if (client) {
+        boolean currentLineIsBlank = true;
+        while (client.connected()) {
+            if (client.available()) {
+                char c = client.read(); 
 
-    while (client.connected()) {
-      if (client.available()) {
-        char c = client.read();
-        http_request += c;
+                if (req_index < (REQ_BUF_SZ - 1)) {
+                    HTTP_req[req_index] = c;   
+                    req_index++;
+                }
+//                Serial.print(c);
 
-        if (c == '\n' && currentLineIsBlank) {
-          client.println("HTTP/1.1 200 OK");
-          client.println("Content-Type: text/html");
-          client.println("Connection: Closed");
-          client.println();
+                if (c == '\n' && currentLineIsBlank) {
+                    
+                  if (StrContains(HTTP_req, "GET /")) {
+                    cmd=findCommand (HTTP_req);
 
-          /*
-          ==============================================================================================================================
-          Start the Web Page that contains all information for the LED Lights to display.
-          ==============================================================================================================================
-          */
-          client.println("<!DOCTYPE html");
-          client.println("<html lang=\"en-US\">");
-          client.println("<head>");
-          client.println("<title>LED Lights (Web Control)</title>");
-          client.println("<meta charset=\"UTF-8\" />");
-          client.println("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-          client.println("<link href=\"https://gmpg.org/xfn/11\" rel=\"profile\">");
-          client.println("<style type=\"text/css\">");
-          client.println("body { background: #eeeeee; font-family: Trebuchet MS; margin: 1.125em 0; padding: 0; }");
-          client.println("h1 { display: block; font-size: 2em; font-weight: 700; margin: 0.67em 0; }");
-          client.println("h2 { display: block; font-size: 1.5em; font-weight: 700; margin: 0.83em 0; }");
-          client.println("h3 { display: block; font-size: 1.17em; font-weight: 700; margin: 1em 0; }");
-          client.println("h4 { display: block; font-size: 1em; font-weight: 700; margin: 1.33em 0; }");
-          client.println("h5 { didplay: block; font-size: 0.83em; font-weight: 700; margin: 1.67em; }");
-          client.println("h6 { display: block; font-size: 0.67em; font-weight: 700; margin: 2.33em 0; }");
-          client.println(".site-container { background: #ffffff; border: 0.063em solid #cccccc; clear: both; content: ""; display: table; margin: 0 auto; padding: 1.125em; width: 70.875em }");
-          client.println(".site-header { margin-bottom: 1.125em; padding: 1.125em; }");
-          client.println(".site-title, .site-description { margin: 0; padding: 0; text-align: center; }");
-          client.println(".site-address { margin: 0; padding: 0; text-align: center; }");
-          client.println(".led-grid-system { text-align: center; }");
-          client.println(".led-grid-system ul { float: left; list-style: none; margin: 0; padding: 0; width: 100%; }");
-          client.println(".led-grid-system li { float: left; list-style: none; margin: 0; padding: 0; width: 33.33333333333333%; }");
-          client.println(".led-lights { margin: 0;  padding: 0; }");
-          client.println("</style>");
-          client.println("</head>");
-          client.println("<body>");
-          client.println("<section class=\"site-container\">");
-          client.println("<header class=\"site-header\">");
-          client.println("<h1 class=\"site-title\">");
-          client.println( name );
-          client.println("</h1>");
-          client.println("<h3 class=\"site-description\">");
-          client.println( tagline );  
-          client.println("</h3>");
-          client.println("<h4 class=\"site-address\">");
-          client.println(Ethernet.localIP());
-          client.println("</h4>");
-          client.println("</header>");
-          client.println("<div class=\"led-grid-system\">");
-          client.println("<ul>");
-          client.println("<li>");
-          client.println("<h2 class=\"led-lights\">System Information</h2>");
-          client.println("<p>Click to turn on and off the Red LED Light.</p>");
-          client.println("<div class=\"system-information\">");
-          client.println("<table>");
-          client.println("<tbody>");
-          client.println("<tr>");
-          client.println("<th>Model</th>");
-          client.println("<td>");
-          client.println("86Duino Zero");
-          client.println("</td>");
-          client.println("</tr>");
-          client.println("<tr>");
-          client.println("<th>MAC Address</th>");
-          client.println("<td>");
-          macAddress( client );
-          client.println("</td>");
-          client.println("</tr>");
-          client.println("</tbody>");
-          client.println("</table>");
-          client.println("</div>");
-          client.println("</li>");
-          client.println("<li>");
-          client.println("<h2 class=\"led-lights\">Differiential Pressure</h2>");
-          sda(client);
-          client.println("</li>");
-          client.println("<li>");
-          client.println("<h2 class=\"led-lights\">Green LED Light</h2>");
-          client.println("<p>Click to turn on and off the Green LED Light.</p>");
-          client.println("<form method=\"get\">");
-          greenLED_Checkbox(client);          
-          client.println("</form>");
-          client.println("</li>");
-          client.println("</ul>");
-          client.println("</div>");
-          client.println("</section>");
-          client.println("</body>");
-          client.println("</html>");
-          Serial.print(http_request);
-          http_request = "";
-          break;
+                    switch(cmd) {
+
+                        case  getSensors :
+                                        sprintf(spf, "{\"analog0\":\"%d\",\"analog1\":\"%d\"}\n", random(0,100), random(0,100) );
+                                        client.print(spf);
+                                        break;
+
+                        case getTitle :
+                                        
+                                        sprintf(spf, "{\"value\":\"%s\"}\n", name.c_str()); 
+                                        client.println(spf);
+                                        break;
+                                     
+                        case getName1 :
+                                        sprintf(spf, "{\"value\":\"%s\"}\n", "Temp Outside");  
+                                        client.print(spf);
+                                        break;
+
+                          default :
+                                  if (StrContains(HTTP_req, "GET / ")  || StrContains(HTTP_req, "GET /web/index.htm")) {
+
+                                        http200ok(client);
+                                        fp = fopen("/web/index.htm", "r");
+                                        char cc = fgetc(fp);
+                                        while (cc != EOF) {
+                                            client.write(cc);
+                                            cc = fgetc(fp);
+                                        }  
+                                        fclose(fp);
+                                        break;  
+                                  }
+                    }         // switch end
+
+                      req_index = 0;
+                      StrClear(HTTP_req, REQ_BUF_SZ);
+                      break;
+                  }
+            } 
+                
+            if (c == '\n') {
+                currentLineIsBlank = true;
+            } 
+            else if (c != '\r') {
+                currentLineIsBlank = false;
+            }
         }
-
-        if (c == '\n') {
-          currentLineIsBlank = true;
-        }
-        else if (c != '\r') {
-          currentLineIsBlank = false;
-        }
-      }
+      } 
+        delay(1);
+        client.stop();
     }
-    delay(1);
-    client.stop();
-  }
+    
 }
 
-/*
-========================================================================================================================================
- 5.0 - redLED Checkbox
-========================================================================================================================================
-*/
-
-void macAddress( EthernetClient cl ) {
-  cl.print(mac[0], HEX);
-  cl.print(":");
-  cl.print(mac[1], HEX);
-  cl.print(":");
-  cl.print(mac[2], HEX);
-  cl.print(":");
-  cl.print(mac[3], HEX);
-  cl.print(":");
-  cl.print(mac[4], HEX);
-  cl.print(":");
-  cl.println(mac[5], HEX);
-}
-void sda(EthernetClient cl) {
-    uint16_t error;
-    char errorMessage[256];
-
-    delay(1000);
-
-    // Read Measurement
-    float differentialPressure;
-    float temperature;
-
-    error = sdp.readMeasurement(differentialPressure, temperature);
-
-    if (error) {
-        cl.print("Error trying to execute readMeasurement(): ");
-        errorToString(error, errorMessage, 256);
-        cl.println(errorMessage);
-    } else {
-        cl.print("DifferentialPressure[Pa]:");
-        cl.print(differentialPressure);
-        cl.print("\t");
-        cl.print("Temperature[°C]:");
-        cl.print(temperature);
-        cl.println();
+void StrClear(char *str, char length) {
+    for (int i = 0; i < length; i++) {
+        str[i] = 0;
     }
 }
 
-/*
-========================================================================================================================================
- 6.0 - yellowLED Checkbox
-========================================================================================================================================
-*/
-void yellowLED_Checkbox(EthernetClient cl) {
-  
+char StrContains(char *str, char *sfind) {
+    char found = 0;
+    char index = 0;
+    char len;
+
+    len = strlen(str);
+    if (strlen(sfind) > len) {
+        return 0;
+    }
+    while (index < len) {
+        if (str[index] == sfind[found]) {
+            found++;
+            if (strlen(sfind) == found) {
+                return 1;
+            }
+        }
+        else {
+            found = 0;
+        }
+        index++;
+    }
+    return 0;
 }
 
-/*
-========================================================================================================================================
- 7.0 - greenLED Checkbox
-========================================================================================================================================
-*/
-void greenLED_Checkbox(EthernetClient cl) {
- 
+void http200ok(EthernetClient client) {
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: text/html");
+  client.println("Connnection: close");
+  client.println();
 }
 
-String keyString(const __FlashStringHelper * key) {
+int findCommand (char* searchText) {
+    int count = 0;
+    int foundIndex = -1;  // -1 = not found
+    while (count < commands_count)  {
+        if (StrContains (searchText, commands[count] ))  {
+            foundIndex = count;
+            break;
+        }
+        count++;
+    }
+    return foundIndex;
+}
+
+String my_findString(char * key) {
   char value_string[VALUE_MAX_LENGTH];
-  int value_length = SD_findKey(key, value_string);
-  return HELPER_ascii2String(value_string, value_length);
-}
-String getTagline(const __FlashStringHelper * key) {
-  char value_string[VALUE_MAX_LENGTH];
-  int value_length = SD_findKey(key, value_string);
+  int value_length = my_findKey(key, value_string);
   return HELPER_ascii2String(value_string, value_length);
 }
 
-int SD_findKey(const __FlashStringHelper * key, char * value) {
-  File configFile = SD.open(CONFIG_FILE);
-
-  if (!configFile) {
-    Serial.print(F("SD Card: error on opening file "));
+int my_findKey(char * key, char * value) {
+  FILE *fp=fopen(CONFIG_FILE, "r");
+  if(fp == NULL) {
+    Serial.print("Error on opening file ");
     Serial.println(CONFIG_FILE);
     return 0;
   }
-
-  char key_string[KEY_MAX_LENGTH];
-  char SD_buffer[KEY_MAX_LENGTH + VALUE_MAX_LENGTH + 1]; // 1 is = character
-  int key_length = 0;
+ 
+  char my_buffer[KEY_MAX_LENGTH + VALUE_MAX_LENGTH + 1];
+  int key_length = strlen(key);
   int value_length = 0;
+  while (fgets(my_buffer, 255, (FILE*)fp) != NULL) {
+    int buffer_length=strlen(my_buffer)-1;
+    my_buffer[buffer_length]='\0';
 
-  // Flash string to string
-  PGM_P keyPoiter;
-  keyPoiter = reinterpret_cast<PGM_P>(key);
-  byte ch;
-  do {
-    ch = pgm_read_byte(keyPoiter++);
-    if (ch != 0)
-      key_string[key_length++] = ch;
-  } while (ch != 0);
-
-  // check line by line
-  while (configFile.available()) {
-    int buffer_length = configFile.readBytesUntil('\n', SD_buffer, 100);
-    if (SD_buffer[buffer_length - 1] == '\r')
-      buffer_length--; // trim the \r
-
-    if (buffer_length > (key_length + 1)) { // 1 is = character
-      if (memcmp(SD_buffer, key_string, key_length) == 0) { // equal
-        if (SD_buffer[key_length] == '=') {
-          value_length = buffer_length - key_length - 1;
-          memcpy(value, SD_buffer + key_length + 1, value_length);
-          break;
+    if (buffer_length > (key_length + 1)) {
+    if (memcmp(my_buffer, key, key_length) == 0) { 
+      if (my_buffer[key_length] == '=') {
+        value_length = buffer_length - key_length - 1;
+        memcpy(value, my_buffer + key_length + 1, value_length);
+        value[value_length]='\0';
+        break;
         }
       }
     }
-  }
 
-  configFile.close();  // close the file
+  }
+  fclose(fp);  
   return value_length;
-}
+} 
 
 String HELPER_ascii2String(char *ascii, int length) {
   String str;
@@ -374,27 +243,4 @@ String HELPER_ascii2String(char *ascii, int length) {
   }
 
   return str;
-}
-
-int keyNumber(const __FlashStringHelper * key) {
-  char value_string[VALUE_MAX_LENGTH];
-  int value_length = SD_findKey(key, value_string);
-  return HELPER_ascii2Int(value_string, value_length);
-}
-
-int HELPER_ascii2Int(char *ascii, int length) {
-  int sign = 1;
-  int number = 0;
-
-  for (int i = 0; i < length; i++) {
-    char c = *(ascii + i);
-    if (i == 0 && c == '-')
-      sign = -1;
-    else {
-      if (c >= '0' && c <= '9')
-        number = number * 10 + (c - '0');
-    }
-  }
-
-  return number * sign;
 }
