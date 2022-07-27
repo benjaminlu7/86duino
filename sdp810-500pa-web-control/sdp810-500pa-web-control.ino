@@ -1,7 +1,49 @@
-#include <Ethernet.h>
-#include <ArduinoMDNS.h>
-#include <SD.h>
+/*
+========================================================================================================================================
+SDP810-500pa (Web Control) 
+========================================================================================================================================
+This SDP810-500pa (Web Control) is used as a sensor for outputing differiential pressure and temperature. This project also allows users
+to pre-define variables using config.txt file which can be modify.
 
+@package   SDP810-500pas (Web Control)
+@author    ICOP Technology Inc. <https://www.icoptech.com>
+@copyright Copyright 2022, ICOP Technology Inc.
+@license   GNU General Public License v2 or later
+========================================================================================================================================
+*/
+
+/*
+========================================================================================================================================
+Table of Content
+========================================================================================================================================
+ 1.0 - Required Files
+ 2.0 - Variables
+ 3.0 - Setup
+ 4.0 - Loop
+ 5.0 - redLED Checkbox
+ 6.0 - yellowLED Checkbox
+ 7.0 - greenLED Checkbox
+========================================================================================================================================
+*/
+
+/*
+========================================================================================================================================
+ 1.0 - Required Files
+========================================================================================================================================
+*/
+#include <Arduino.h>
+#include <ArduinoMDNS.h>
+#include <Ethernet.h>
+#include <SD.h>
+#include <SensirionI2CSdp.h>
+#include <SPI.h>
+#include <Wire.h>
+
+/*
+========================================================================================================================================
+ 2.0 - Variables
+========================================================================================================================================
+*/
 #define debug 1
 #define spi_flash 0
 #define dhcp 0
@@ -27,45 +69,47 @@ const int commands_count=sizeof(commands)/sizeof(commands[0]);
 
 String name;
 
-void setup()
-{
+void setup() {
     Serial.begin(115200);   
     pinMode(A0, INPUT) ;
     pinMode(A1, INPUT) ;
     
     
-#if debug    
-// if debug mode waiting for Serial console 
-    while (!Serial) {;}
-// delay(2000);
-#endif
-
-#if spi_flash
-// show whether it's boot from SD or internal SPI flash
-  Serial.println("Run from SPI Flash");
-#else
-  Serial.println("Run from SD card");
-#endif
-
-#if dhcp
-  ;
-#else
-  byte ip[] = { 192, 168, 100, 147 };    
-#endif
-
-#if dhcp
-    Ethernet.begin();
-#else
-    Ethernet.begin(Ethernet.localMAC(), ip);
-#endif
+    #if debug    
+        // if debug mode waiting for Serial console 
+        delay( 1000 );
+        while( ! Serial ) {
+          
+        }
+        delay( 1000 );
+    #endif
+    
+    #if spi_flash
+        // show whether it's boot from SD or internal SPI flash
+        Serial.println("Run from SPI Flash");
+        #else
+        Serial.println("Run from SD card");
+    #endif
+    
+    #if dhcp
+      ;
+    #else
+        byte ip[] = { 192, 168, 100, 147 };    
+    #endif
+    
+    #if dhcp
+        Ethernet.begin();
+    #else
+        Ethernet.begin(Ethernet.localMAC(), ip);
+    #endif
+    
     server.begin();
+    
     Serial.print("Server is running at ip: ");       
     Serial.println(Ethernet.localIP());     
-
-
-
+    
     name = my_findString("name");
-
+    
     Serial.println( name );
 }
 
@@ -85,7 +129,6 @@ void loop()
                     HTTP_req[req_index] = c;   
                     req_index++;
                 }
-//                Serial.print(c);
 
                 if (c == '\n' && currentLineIsBlank) {
                     
