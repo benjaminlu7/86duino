@@ -44,7 +44,7 @@ Table of Content
  2.0 - Variables
 ========================================================================================================================================
 */
-#define debug 0
+#define debug 1
 #define spi_flash 0
 #define dhcp 0
 
@@ -63,14 +63,23 @@ char HTTP_req[REQ_BUF_SZ] = {0};
 char req_index = 0;
 char spf[50];
 
-char * commands[] = { "getSensors", "getTitle", "getTagline", "getMacAddress"};
-enum {getSensors, getTitle, getTagline, getMacAddress};
+char * commands[] = { "getSensors", "getTitle", "getTagline", "getMacAddress", "getIPAddress"};
+enum {getSensors, getTitle, getTagline, getMacAddress, getIPAddress};
 const int commands_count=sizeof(commands)/sizeof(commands[0]);
 
-String name;
-String tagline;
-
 byte *mac = Ethernet.localMAC();
+
+String name    = my_findString( "name" );
+String tagline    = my_findString( "tagline" );
+
+int ip1 = my_findInt( "ip1" );
+int ip2 = my_findInt( "ip2" );
+int ip3 =  my_findInt( "ip3" );
+int ip4 = my_findInt( "ip4" );
+
+IPAddress ip(ip1, ip2, ip3, ip4);
+
+SensirionI2CSdp sdp;
 
 void setup() {
     Serial.begin(115200);   
@@ -95,15 +104,9 @@ void setup() {
     #endif
     
     #if dhcp
-      ;
-    #else
-        byte ip[] = { 192, 168, 100, 147 };    
-    #endif
-    
-    #if dhcp
         Ethernet.begin();
     #else
-        Ethernet.begin(Ethernet.localMAC(), ip);
+        Ethernet.begin(mac, ip);
     #endif
     
     server.begin();
@@ -119,9 +122,7 @@ void setup() {
 void loop()
 {
     int cmd;
-    name    = my_findString( "name" );
-    tagline = my_findString( "tagline" );
-    mac = Ethernet.localMAC();
+    
     EthernetClient client = server.available();
 
     if (client) {
@@ -159,7 +160,12 @@ void loop()
                                         break;
 
                         case getMacAddress :
-                            sprintf( spf, "{\"value\":\"%s\"}\n", mac  );  
+                            sprintf( spf, "{\"value\":\"%s\"}\n", displayMacAddress(Ethernet.localMAC()).c_str() );  
+                            client.print(spf);
+                            break;
+
+                        case getIPAddress :
+                            sprintf( spf, "{\"value\":\"%s\"}\n", displayIPAddress(Ethernet.localIP()).c_str() );  
                             client.print(spf);
                             break;
 
@@ -195,6 +201,21 @@ void loop()
         client.stop();
     }
     
+}
+
+String displayMacAddress(byte *address) {
+    return  String(address[0], HEX) + "0:" + 
+            String(address[1], HEX) + ":" + 
+            String(address[2], HEX) + ":" + 
+            String(address[3], HEX) + ":" +
+            String(address[4], HEX);
+}
+
+String displayIPAddress(IPAddress address) {
+    return  String(address[0]) + "0:" + 
+            String(address[1]) + ":" + 
+            String(address[2]) + ":" + 
+            String(address[3]);
 }
 
 void StrClear(char *str, char length) {
@@ -253,6 +274,12 @@ String my_findString(char * key) {
   return HELPER_ascii2String(value_string, value_length);
 }
 
+int my_findInt(char * key) {
+  char value_string[VALUE_MAX_LENGTH];
+  int value_length = my_findKey(key, value_string);
+  return HELPER_ascii2Int(value_string, value_length);
+}
+
 int my_findKey(char * key, char * value) {
   FILE *fp=fopen(CONFIG_FILE, "r");
   if(fp == NULL) {
@@ -297,6 +324,19 @@ String HELPER_ascii2String(char *ascii, int length) {
   return str;
 }
 
-void macAddress() {
+int HELPER_ascii2Int(char *ascii, int length) {
+  int sign = 1;
+  int number = 0;
 
+  for (int i = 0; i < length; i++) {
+    char c = *(ascii + i);
+    if (i == 0 && c == '-')
+      sign = -1;
+    else {
+      if (c >= '0' && c <= '9')
+        number = number * 10 + (c - '0');
+    }
+  }
+
+  return number * sign;
 }
