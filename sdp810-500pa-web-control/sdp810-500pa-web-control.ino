@@ -31,10 +31,10 @@ Table of Content
  1.0 - Required Files
 ========================================================================================================================================
 */
-#include <Arduino.h>
-#include <ArduinoMDNS.h>
 #include <Ethernet.h>
 #include <SD.h>
+#include <Arduino.h>
+#include <ArduinoMDNS.h>
 #include <SensirionI2CSdp.h>
 #include <SPI.h>
 #include <Wire.h>
@@ -44,7 +44,7 @@ Table of Content
  2.0 - Variables
 ========================================================================================================================================
 */
-#define debug 1
+#define debug 0
 #define spi_flash 0
 #define dhcp 0
 
@@ -63,11 +63,12 @@ char HTTP_req[REQ_BUF_SZ] = {0};
 char req_index = 0;
 char spf[50];
 
-char * commands[] = { "getSensors", "getTitle", "getName1"};
-enum {getSensors, getTitle, getName1};
+char * commands[] = { "getSensors", "getTitle", "getTagline"};
+enum {getSensors, getTitle, getTagline};
 const int commands_count=sizeof(commands)/sizeof(commands[0]);
 
 String name;
+String tagline;
 
 void setup() {
     Serial.begin(115200);   
@@ -116,7 +117,8 @@ void setup() {
 void loop()
 {
     int cmd;
-    name = my_findString( "name" );
+    name    = my_findString( "name" );
+    tagline = my_findString( "tagline" );
     EthernetClient client = server.available();
 
     if (client) {
@@ -148,14 +150,13 @@ void loop()
                                         client.println(spf);
                                         break;
                                      
-                        case getName1 :
-                                        sprintf(spf, "{\"value\":\"%s\"}\n", "Temp Outside");  
+                        case getTagline :
+                                        sprintf( spf, "{\"value\":\"%s\"}\n", tagline.c_str() );  
                                         client.print(spf);
                                         break;
 
                           default :
                                   if (StrContains(HTTP_req, "GET / ")  || StrContains(HTTP_req, "GET /web/index.htm")) {
-
                                         http200ok(client);
                                         fp = fopen("/web/index.htm", "r");
                                         char cc = fgetc(fp);
