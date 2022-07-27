@@ -23,6 +23,7 @@
     function customize_page() {
         replace_element("title", "getTitle");
         replace_element("tagline", "getTagline");
+        replace_element( "macAddress", "getMacAddress" );
     }
 </script>
 <script>
@@ -51,7 +52,7 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
 
 </script>
 <body onload="customize_page()" style="background: #eeeeee; margin: 0; padding: 0;">
-<div id="container" class="site-container" style="margin: 1.125rem auto; width: 1024px;">
+<div id="container" class="site-container" style="margin: 1.125rem auto; width: 960px;">
     <header class="site-header" style="text-align: center;">
         <h1 id="title" class="site-title" style="font-size: 3rem; margin: 0; padding: 0">ICOP Technology Inc</h1>
         <span id="tagline" class="site-description" style="font-size: 1.125rem;">SDP810-500pa (Web Control)</span>
@@ -61,16 +62,20 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
             <ul class="items" style="display: grid; grid-template-columns: 30% 70%; list-style-type: none; margin: 0; padding: 0;">
                 <li class="item">
                     <h2 class="system-title">System Information</h2>
-                    <table>
+                    <table style="border-collapse: collapse; width: 100%;">
                         <tbody>
                             <tr>
-                                <th>Model</th>
-                                <td>86Duino Zero</td>
+                                <th style="background: #333333; color: #ffffff; padding: 0.5rem;">Model</th>
+                                <td style="padding: 0.5rem">86Duino Zero</td>
+                            </tr>
+                            <tr>
+                                <th style="background: #eeeeee; color: #000000; padding: 0.5rem;">Mac Address</th>
+                                <td id="macAddress" style="padding: 0.5rem">00:00:00:00:00</td>
                             </tr>
                         </tbody>
                     </table>
                 </li>
-                <li class="item">
+                <li class="item" style="text-align: center;">
                     <canvas id="Canvas0" style="height: auto; max-width: 100%;"></canvas>
                     <canvas id="Canvas1"></canvas>
                 </li>
@@ -95,10 +100,8 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
                 valueFormat: { int: 4, dec: 0 },
                 glow: true,
                 units: 'KPa', title: 'Pressure',
-    //            majorTicks: ['0', '127', '255', '383', '511', '639', '767', '895', '1023'],
                 majorTicks: ['0', '20', '40', '60', '80', '100'],
                 strokeTicks: true,
-    //            highlights: [{from: 00,to: 255,color: 'PaleGreen'}, {from: 256,to: 767,color: 'Khaki'}, {from: 768,to: 1023,color: 'LightSalmon'}],
                 highlights: [{from: 0,to: 20,color: 'PaleGreen'}, {from: 20,to: 80,color: 'Khaki'}, {from: 80,to: 100,color: 'LightSalmon'}],
                 animation: {delay: 10, duration: 300,fn: 'bounce' }
             });
@@ -112,10 +115,8 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
                 valueFormat: { int: 3, dec: 1 },
                 glow: true,
                 units: '°C', title: 'Temperature',
-    //            majorTicks: ['0', '127', '255', '383', '511', '639', '767', '895', '1023'],
                 majorTicks: ['0', '20', '40', '60', '80', '100'],
                 strokeTicks: true,
-    //            highlights: [{from: 00,to: 255,color: 'Green'}, {from: 256,to: 767,color: 'Yellow'}, {from: 768,to: 1023,color: 'Red'}],
                 highlights: [{from: 0,to: 30,color: 'PaleGreen'}, {from: 30,to: 70,color: 'Yellow'}, {from: 70,to: 100,color: 'Red'}],
                 animation: {delay: 10, duration: 300,fn: 'bounce' }
             });

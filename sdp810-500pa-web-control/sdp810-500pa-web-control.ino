@@ -63,12 +63,14 @@ char HTTP_req[REQ_BUF_SZ] = {0};
 char req_index = 0;
 char spf[50];
 
-char * commands[] = { "getSensors", "getTitle", "getTagline"};
-enum {getSensors, getTitle, getTagline};
+char * commands[] = { "getSensors", "getTitle", "getTagline", "getMacAddress"};
+enum {getSensors, getTitle, getTagline, getMacAddress};
 const int commands_count=sizeof(commands)/sizeof(commands[0]);
 
 String name;
 String tagline;
+
+byte *mac = Ethernet.localMAC();
 
 void setup() {
     Serial.begin(115200);   
@@ -119,6 +121,7 @@ void loop()
     int cmd;
     name    = my_findString( "name" );
     tagline = my_findString( "tagline" );
+    mac = Ethernet.localMAC();
     EthernetClient client = server.available();
 
     if (client) {
@@ -154,6 +157,11 @@ void loop()
                                         sprintf( spf, "{\"value\":\"%s\"}\n", tagline.c_str() );  
                                         client.print(spf);
                                         break;
+
+                        case getMacAddress :
+                            sprintf( spf, "{\"value\":\"%s\"}\n", mac  );  
+                            client.print(spf);
+                            break;
 
                           default :
                                   if (StrContains(HTTP_req, "GET / ")  || StrContains(HTTP_req, "GET /web/index.htm")) {
@@ -287,4 +295,8 @@ String HELPER_ascii2String(char *ascii, int length) {
   }
 
   return str;
+}
+
+void macAddress() {
+
 }
