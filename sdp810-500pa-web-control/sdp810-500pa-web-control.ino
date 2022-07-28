@@ -63,8 +63,8 @@ char HTTP_req[REQ_BUF_SZ] = {0};
 char req_index = 0;
 char spf[50];
 
-char * commands[] = { "getSensors", "getTitle", "getTagline", "getMacAddress", "getIPAddress"};
-enum {getSensors, getTitle, getTagline, getMacAddress, getIPAddress};
+char * commands[] = { "getSensors", "getTitle", "getTagline", "getMacAddress", "getIPAddress", "getProductNumber", "getSerialNumber"};
+enum {getSensors, getTitle, getTagline, getMacAddress, getIPAddress, getProductNumber, getSerialNumber};
 const int commands_count=sizeof(commands)/sizeof(commands[0]);
 
 byte *mac = Ethernet.localMAC();
@@ -169,6 +169,16 @@ void loop()
                             client.print(spf);
                             break;
 
+                          case getProductNumber :
+                            sprintf( spf, "{\"value\":\"%d\"}\n", displayProductNumber() );  
+                            client.print(spf);
+                            break;
+
+                          case getSerialNumber :
+                            sprintf( spf, "{\"value\":\"%s\"}\n", displaySerialNumber().c_str() );  
+                            client.print(spf);
+                            break;
+
                           default :
                                   if (StrContains(HTTP_req, "GET / ")  || StrContains(HTTP_req, "GET /web/index.htm")) {
                                         http200ok(client);
@@ -181,7 +191,7 @@ void loop()
                                         fclose(fp);
                                         break;  
                                   }
-                    }         // switch end
+                    }         // swistch end
 
                       req_index = 0;
                       StrClear(HTTP_req, REQ_BUF_SZ);
@@ -201,6 +211,66 @@ void loop()
         client.stop();
     }
     
+}
+
+String displaySerialNumber() {
+    Wire.begin();
+
+    uint16_t error;
+    char errorMessage[256];
+
+    sdp.begin(Wire, SDP8XX_I2C_ADDRESS_0);
+
+    uint32_t productNumber;
+    uint8_t serialNumber[8];
+    uint8_t serialNumberSize = 8;
+
+    sdp.stopContinuousMeasurement();
+
+    error = sdp.readProductIdentifier( productNumber, serialNumber, serialNumberSize );
+    
+    if ( ! error) {
+        return String("0x") +
+               serial();
+    }
+}
+
+String serial() {
+    Wire.begin();
+
+    uint16_t error;
+    char errorMessage[256];
+
+    sdp.begin(Wire, SDP8XX_I2C_ADDRESS_0);
+
+    uint32_t productNumber;
+    uint8_t serialNumber[8];
+    uint8_t serialNumberSize = 8;
+    
+  for ( size_t i = 0; i < 8; i++ ) {
+    return String(serialNumber[i], HEX);  
+  }  
+}
+
+int displayProductNumber() {
+      Wire.begin();
+  
+      uint16_t error;
+      char errorMessage[256];
+  
+      sdp.begin(Wire, SDP8XX_I2C_ADDRESS_0);
+  
+      uint32_t productNumber;
+      uint8_t serialNumber[8];
+      uint8_t serialNumberSize = 8;
+  
+      sdp.stopContinuousMeasurement();
+  
+      error = sdp.readProductIdentifier(productNumber, serialNumber, serialNumberSize);
+      
+      if ( ! error) {
+          return productNumber;
+      }
 }
 
 String displayMacAddress(byte *address) {
@@ -254,6 +324,8 @@ void http200ok(EthernetClient client) {
   client.println("Connnection: close");
   client.println();
 }
+
+
 
 int findCommand (char* searchText) {
     int count = 0;
