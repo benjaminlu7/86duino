@@ -63,8 +63,8 @@ char HTTP_req[REQ_BUF_SZ] = {0};
 char req_index = 0;
 char spf[50];
 
-char * commands[] = { "getSensors", "getTitle", "getTagline", "getMacAddress", "getIPAddress", "getProductNumber", "getSerialNumber"};
-enum {getSensors, getTitle, getTagline, getMacAddress, getIPAddress, getProductNumber, getSerialNumber};
+char * commands[] = { "getSensors", "getTitle", "getTagline", "getMacAddress", "getIPAddress", "getProductNumber", "getSerialNumber", "getDifferentialPressure", "getTemperature"};
+enum {getSensors, getTitle, getTagline, getMacAddress, getIPAddress, getProductNumber, getSerialNumber, getDifferentialPressure, getTemperature};
 const int commands_count=sizeof(commands)/sizeof(commands[0]);
 
 byte *mac = Ethernet.localMAC();
@@ -82,10 +82,7 @@ IPAddress ip(ip1, ip2, ip3, ip4);
 SensirionI2CSdp sdp;
 
 void setup() {
-    Serial.begin(115200);   
-    pinMode(A0, INPUT) ;
-    pinMode(A1, INPUT) ;
-    
+    Serial.begin(115200);
     
     #if debug    
         // if debug mode waiting for Serial console 
@@ -144,7 +141,7 @@ void loop()
                     switch(cmd) {
 
                         case  getSensors :
-                                        sprintf(spf, "{\"analog0\":\"%d\",\"analog1\":\"%d\"}\n", random(0,100), random(0,100) );
+                                        sprintf(spf, "{\"analog0\":\"%d\",\"analog1\":\"%d\"}\n", random(0, 100), random(0, 100) );
                                         client.print(spf);
                                         break;
 
@@ -174,8 +171,13 @@ void loop()
                             client.print(spf);
                             break;
 
-                          case getSerialNumber :
-                            sprintf( spf, "{\"value\":\"%s\"}\n", displaySerialNumber().c_str() );  
+                          case getDifferentialPressure :
+                            sprintf( spf, "{\"value\":\"%s\"}\n", displayDifferentialPressure().c_str() );  
+                            client.print(spf);
+                            break;
+
+                          case getTemperature :
+                            sprintf( spf, "{\"value\":\"%s\"}\n", displayTemperature().c_str() );  
                             client.print(spf);
                             break;
 
@@ -213,25 +215,37 @@ void loop()
     
 }
 
-String displaySerialNumber() {
-    Wire.begin();
-
+ String displayDifferentialPressure() {
     uint16_t error;
     char errorMessage[256];
 
-    sdp.begin(Wire, SDP8XX_I2C_ADDRESS_0);
+    delay(1000);
 
-    uint32_t productNumber;
-    uint8_t serialNumber[8];
-    uint8_t serialNumberSize = 8;
+    // Read Measurement
+    float differentialPressure;
+    float temperature;
 
-    sdp.stopContinuousMeasurement();
+    error = sdp.readMeasurement(differentialPressure, temperature);
 
-    error = sdp.readProductIdentifier( productNumber, serialNumber, serialNumberSize );
-    
     if ( ! error) {
-        return String("0x") +
-               serial();
+        return String( differentialPressure );
+    }
+}
+
+ String displayTemperature() {
+    uint16_t error;
+    char errorMessage[256];
+
+    delay(1000);
+
+    // Read Measurement
+    float differentialPressure;
+    float temperature;
+
+    error = sdp.readMeasurement(differentialPressure, temperature);
+
+    if ( ! error) {
+        return String( temperature );
     }
 }
 

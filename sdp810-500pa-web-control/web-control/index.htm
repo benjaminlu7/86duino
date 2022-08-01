@@ -6,6 +6,7 @@
 <link rel="profile" href="https://gmpg.org/xfn/11" />
 </head>
 <script>
+
     function replace_element( targetElement, command ) {
         nocache = "&nocache=" + Math.random() * 1000000;
         var xmlhttp;
@@ -25,7 +26,33 @@
         replace_element( "tagline", "getTagline" );
         replace_element( "macAddress", "getMacAddress" );
         replace_element( "sensorProduct", "getProductNumber");
-        replace_element( "sensorSerial", "getSerialNumber" );
+        replace_element( "sensorSerial", "getDifferentialPressure" );
+        replace_element( "sensorTemperature", "getTemperature" );
+//        replace_element( "Canvas0", "getDifferentialPressure" );
+//        replace_element( "Canvas1", "getTemperature" );
+    }
+
+    var analog0=50
+    var analog1=70.6
+    window.setInterval(function () {GetSensors();}, 200);
+
+    function GetSensors() {
+        nocache = "&nocache=" + Math.random() * 1000000;
+        var xmlhttp;
+        xmlhttp = new XMLHttpRequest();
+
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                var jsonObj = JSON.parse(xmlhttp.responseText);
+                document.getElementById("Canvas0").innerHTML = jsonObj.analog0.toString();
+                document.getElementById("Canvas1").innerHTML = jsonObj.analog1.toString();
+                analog0 = parseInt(jsonObj.analog0.toString());
+                analog1 = parseInt(jsonObj.analog1.toString());						
+                
+            }
+        }
+        xmlhttp.open("GET", "getSensors" + nocache, true);
+        xmlhttp.send();
     }
 </script>
 <script>
@@ -84,14 +111,18 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
                                 <td id="sensorProduct" style="padding: 0.5rem">86Duino Zero</td>
                             </tr>
                             <tr>
-                                <th style="background: #eeeeee; color: #000000; padding: 0.5rem;">Serial Number</th>
+                                <th style="background: #eeeeee; color: #000000; padding: 0.5rem;">Differential Pressure</th>
                                 <td id="sensorSerial" style="padding: 0.5rem">00:00:00:00:00</td>
+                            </tr>
+                            <tr>
+                                <th style="background: #333333; color: #ffffff; padding: 0.5rem;">Temperature</th>
+                                <td id="sensorTemperature" style="padding: 0.5rem">00:00:00:00:00</td>
                             </tr>
                         </tbody>
                     </table>
                 </li>
                 <li class="item" style="text-align: center;">
-                    <canvas id="Canvas0" style="height: auto; max-width: 100%;"></canvas>
+                    <canvas id="Canvas0"></canvas>
                     <canvas id="Canvas1"></canvas>
                 </li>
             </ul>
