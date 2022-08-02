@@ -26,15 +26,13 @@
         replace_element( "tagline", "getTagline" );
         replace_element( "macAddress", "getMacAddress" );
         replace_element( "sensorProduct", "getProductNumber");
-        replace_element( "sensorSerial", "getDifferentialPressure" );
+        replace_element( "sensorSerial", "getPressure" );
         replace_element( "sensorTemperature", "getTemperature" );
-//        replace_element( "Canvas0", "getDifferentialPressure" );
-//        replace_element( "Canvas1", "getTemperature" );
     }
 
-    var analog0=50
-    var analog1=70.6
-    window.setInterval(function () {GetSensors();}, 200);
+	var pressure=30.24;
+	var temperature=30.24;
+    window.setInterval(function () {GetSensors();}, 1000);
 
     function GetSensors() {
         nocache = "&nocache=" + Math.random() * 1000000;
@@ -44,10 +42,10 @@
         xmlhttp.onreadystatechange = function () {
             if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                 var jsonObj = JSON.parse(xmlhttp.responseText);
-                document.getElementById("Canvas0").innerHTML = jsonObj.analog0.toString();
-                document.getElementById("Canvas1").innerHTML = jsonObj.analog1.toString();
-                analog0 = parseInt(jsonObj.analog0.toString());
-                analog1 = parseInt(jsonObj.analog1.toString());						
+				document.getElementById("myPressure").innerHTML = jsonObj.pressure.toString();
+				document.getElementById("myTemperature").innerHTML = jsonObj.temperature.toString();				
+                pressure = parseInt(jsonObj.pressure.toString());
+                temperature = parseInt(jsonObj.temperature.toString());
                 
             }
         }
@@ -127,6 +125,9 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
                 </li>
             </ul>
         </div>
+		<p>Differential Pressure =  <span id="myPressure"></span>  </p>
+		<p>Temperature = <span id="myTemperature"></span>  </p>
+
     </section>
     <footer id="footer" class="site-footer">
 
@@ -142,23 +143,23 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
             var gauge0 = new Gauge({
                 renderTo: 'Canvas0',
                 width: 250, height: 250,
-                maxValue: 100,
-                valueFormat: { int: 4, dec: 0 },
+                maxValue: 500,
+                valueFormat: { int: 2, dec: 2 },
                 glow: true,
-                units: 'KPa', title: 'Pressure',
-                majorTicks: ['0', '20', '40', '60', '80', '100'],
+                units: 'Pa', title: 'Pressure',
+                majorTicks: ['0', '100', '200', '300', '400', '500'],
                 strokeTicks: true,
-                highlights: [{from: 0,to: 20,color: 'PaleGreen'}, {from: 20,to: 80,color: 'Khaki'}, {from: 80,to: 100,color: 'LightSalmon'}],
+                highlights: [{from: 0,to: 100,color: 'PaleGreen'}, {from: 100,to: 400,color: 'Khaki'}, {from: 400,to: 500,color: 'LightSalmon'}],
                 animation: {delay: 10, duration: 300,fn: 'bounce' }
             });
-            gauge0.onready = function () { setInterval(function () { gauge0.setValue(analog0); }, 200); };
+            gauge0.onready = function () { setInterval(function () { gauge0.setValue(pressure); }, 1000); };
             gauge0.draw();
             
             var gauge1 = new Gauge({
                 renderTo: 'Canvas1',
                 width: 250, height: 250,
                 maxValue: 100,
-                valueFormat: { int: 3, dec: 1 },
+                valueFormat: { int: 2, dec: 2 },
                 glow: true,
                 units: '°C', title: 'Temperature',
                 majorTicks: ['0', '20', '40', '60', '80', '100'],
@@ -166,7 +167,7 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
                 highlights: [{from: 0,to: 30,color: 'PaleGreen'}, {from: 30,to: 70,color: 'Yellow'}, {from: 70,to: 100,color: 'Red'}],
                 animation: {delay: 10, duration: 300,fn: 'bounce' }
             });
-            gauge1.onready = function () { setInterval(function () { gauge1.setValue(analog1); }, 200); };
+            gauge1.onready = function () { setInterval(function () { gauge1.setValue(temperature); }, 1000); };
             gauge1.draw();
             </script>
 </body>

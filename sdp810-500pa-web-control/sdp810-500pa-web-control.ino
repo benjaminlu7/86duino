@@ -31,20 +31,21 @@ Table of Content
  1.0 - Required Files
 ========================================================================================================================================
 */
+#include <Arduino.h>
+#include <SensirionI2CSdp.h>
+#include <Wire.h>
 #include <Ethernet.h>
 #include <SD.h>
-#include <Arduino.h>
-#include <ArduinoMDNS.h>
-#include <SensirionI2CSdp.h>
 #include <SPI.h>
-#include <Wire.h>
+
+
 
 /*
 ========================================================================================================================================
  2.0 - Variables
 ========================================================================================================================================
 */
-#define debug 1
+#define debug 0
 #define spi_flash 0
 #define dhcp 0
 
@@ -53,18 +54,20 @@ Table of Content
 #define VALUE_MAX_LENGTH 30
 
 // size of buffer used to capture HTTP requests
-#define REQ_BUF_SZ   30
+#define REQ_BUF_SZ   50
 
 
 EthernetServer server(80);
 FILE *fp;
+float differentialPressure;
+float temperature;
 
 char HTTP_req[REQ_BUF_SZ] = {0}; 
 char req_index = 0;
 char spf[50];
 
-char * commands[] = { "getSensors", "getTitle", "getTagline", "getMacAddress", "getIPAddress", "getProductNumber", "getSerialNumber", "getDifferentialPressure", "getTemperature"};
-enum {getSensors, getTitle, getTagline, getMacAddress, getIPAddress, getProductNumber, getSerialNumber, getDifferentialPressure, getTemperature};
+char * commands[] = { "getSensors", "getTitle", "getTagline", "getMacAddress", "getIPAddress", "getProductNumber", "getSerialNumber", "getPressure", "getTemperature"};
+enum {getSensors, getTitle, getTagline, getMacAddress, getIPAddress, getProductNumber, getSerialNumber, getPressure, getTemperature};
 const int commands_count=sizeof(commands)/sizeof(commands[0]);
 
 byte *mac = Ethernet.localMAC();
@@ -83,15 +86,17 @@ SensirionI2CSdp sdp;
 
 void setup() {
     Serial.begin(115200);
-    
+   
     #if debug    
         // if debug mode waiting for Serial console 
-        delay( 1000 );
-        while( ! Serial ) {
-          
-        }
-        delay( 1000 );
+//        delay( 3000 );
+        while( ! Serial ) { }
     #endif
+//=============== SDP800 init =========================================
+    Wire.begin();
+    sdp.begin(Wire, SDP8XX_I2C_ADDRESS_0);
+    sdp.startContinuousMeasurementWithDiffPressureTCompAndAveraging();
+//====================================================================      
     
     #if spi_flash
         // show whether it's boot from SD or internal SPI flash
@@ -109,49 +114,11 @@ void setup() {
     server.begin();
     
     Serial.print("Server is running at ip: ");       
-    Serial.println(Ethernet.localIP());
-
-
-    Wire.begin();
-
-    uint16_t error;
-    char errorMessage[256];
-
-    sdp.begin(Wire, SDP8XX_I2C_ADDRESS_0);
-
-    uint32_t productNumber;
-    uint8_t serialNumber[8];
-    uint8_t serialNumberSize = 8;
-
-    sdp.stopContinuousMeasurement();
-
-    error = sdp.readProductIdentifier(productNumber, serialNumber,
-                                      serialNumberSize);
-    if (error) {
-        Serial.print("Error trying to execute readProductIdentifier(): ");
-        errorToString(error, errorMessage, 256);
-        Serial.println(errorMessage);
-    } else {
-        Serial.print("ProductNumber: ");
-        Serial.print(productNumber);
-        Serial.println();
-        Serial.print("SerialNumber: ");
-        Serial.print("0x");
-        for (size_t i = 0; i < serialNumberSize; i++) {
-            Serial.print(serialNumber[i], HEX);
-        }
-        Serial.println();
-    }
-
-    error = sdp.startContinuousMeasurementWithDiffPressureTCompAndAveraging();
-
-    if (error) {
-        Serial.print(
-            "Error trying to execute "
-            "startContinuousMeasurementWithDiffPressureTCompAndAveraging(): ");
-        errorToString(error, errorMessage, 256);
-        Serial.println(errorMessage);
-    }
+    Serial.println(Ethernet.localIP());     
+    
+    name = my_findString("name");
+    
+    Serial.println( name );
 }
 
 void loop()
@@ -175,18 +142,18 @@ void loop()
                     
                   if (StrContains(HTTP_req, "GET /")) {
                     cmd=findCommand (HTTP_req);
-
                     switch(cmd) {
 
                         case  getSensors :
-                                        sprintf(spf, "{\"analog0\":\"%d\",\"analog1\":\"%d\"}\n", random(0, 100), random(0, 100) );
+                                        read_DiffPressure_Temp(&differentialPressure, &temperature);
+                                        sprintf(spf, "{\"pressure\":\"%d.%02d\",\"temperature\":\"%d.%02d\"}\n",(int)differentialPressure, (int)(fabsf(differentialPressure)*100)%100, (int)temperature, (int)(fabsf(temperature)*100)%100 );
                                         client.print(spf);
                                         break;
 
                         case getTitle :
                                         
                                         sprintf(spf, "{\"value\":\"%s\"}\n", name.c_str()); 
-                                        client.println(spf);
+                                        client.print(spf);
                                         break;
                                      
                         case getTagline :
@@ -204,23 +171,27 @@ void loop()
                             client.print(spf);
                             break;
 
+/*
                           case getProductNumber :
                             sprintf( spf, "{\"value\":\"%d\"}\n", displayProductNumber() );  
                             client.print(spf);
                             break;
-
-                          case getDifferentialPressure :
-                            sprintf( spf, "{\"value\":\"%s\"}\n", displayDifferentialPressure().c_str() );  
+*/
+                          case getPressure :
+                            read_DiffPressure_Temp(&differentialPressure, &temperature);
+                            sprintf( spf, "{\"value\":\"%d.%02d\"}\n", (int)differentialPressure, (int)(fabsf(differentialPressure)*100)%100 );  
                             client.print(spf);
                             break;
 
                           case getTemperature :
-                            sprintf( spf, "{\"value\":\"%s\"}\n", displayTemperature().c_str() );  
+                            read_DiffPressure_Temp(&differentialPressure, &temperature);
+                            sprintf( spf, "{\"value\":\"%d.%02d\"}\n", (int)temperature, (int)(fabsf(temperature)*100)%100 );  
                             client.print(spf);
                             break;
 
                           default :
-                                  if (StrContains(HTTP_req, "GET / ")  || StrContains(HTTP_req, "GET /web/index.htm")) {
+                                  if (StrContains(HTTP_req, "GET / ")  || StrContains(HTTP_req, "GET /index.htm")) {
+
                                         http200ok(client);
                                         fp = fopen("/web/index.htm", "r");
                                         char cc = fgetc(fp);
@@ -253,91 +224,13 @@ void loop()
     
 }
 
- String displayDifferentialPressure() {
-    uint16_t error;
-    char errorMessage[256];
-
-    delay(1000);
-
-    // Read Measurement
-    float differentialPressure;
-    float temperature;
-
-    error = sdp.readMeasurement(differentialPressure, temperature);
-
-    if (error) {
-        Serial.print("Error trying to execute readMeasurement(): ");
-        errorToString(error, errorMessage, 256);
-        Serial.println(errorMessage);
-    } else {
-        Serial.print("DifferentialPressure[Pa]:");
-        Serial.print(differentialPressure);
-        Serial.println();
-        return String( differentialPressure );
-    }
+void read_DiffPressure_Temp(float* differentialPressure, float* temperature) {
+  float dp, tmp;
+  sdp.readMeasurement(dp, tmp);
+  *differentialPressure=dp;
+  *temperature=tmp;
 }
 
- String displayTemperature() {
-    uint16_t error;
-    char errorMessage[256];
-
-    delay(1000);
-
-    // Read Measurement
-    float differentialPressure;
-    float temperature;
-
-    error = sdp.readMeasurement(differentialPressure, temperature);
-
-    if (error) {
-        Serial.print("Error trying to execute readMeasurement(): ");
-        errorToString(error, errorMessage, 256);
-        Serial.println(errorMessage);
-    } else {
-        Serial.print("Temperature[°C]:");
-        Serial.print(temperature);
-        Serial.println();
-        return String( temperature );
-    }
-}
-
-String serial() {
-    Wire.begin();
-
-    uint16_t error;
-    char errorMessage[256];
-
-    sdp.begin(Wire, SDP8XX_I2C_ADDRESS_0);
-
-    uint32_t productNumber;
-    uint8_t serialNumber[8];
-    uint8_t serialNumberSize = 8;
-    
-  for ( size_t i = 0; i < 8; i++ ) {
-    return String(serialNumber[i], HEX);  
-  }  
-}
-
-int displayProductNumber() {
-      Wire.begin();
-  
-      uint16_t error;
-      char errorMessage[256];
-  
-      sdp.begin(Wire, SDP8XX_I2C_ADDRESS_0);
-  
-      uint32_t productNumber;
-      uint8_t serialNumber[8];
-      uint8_t serialNumberSize = 8;
-  
-      sdp.stopContinuousMeasurement();
-  
-      error = sdp.readProductIdentifier(productNumber, serialNumber, serialNumberSize);
-      
-      if ( ! error) {
-          return productNumber;
-      }
-}
 
 String displayMacAddress(byte *address) {
     return  String(address[0], HEX) + "0:" + 
