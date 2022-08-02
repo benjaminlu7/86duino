@@ -109,11 +109,49 @@ void setup() {
     server.begin();
     
     Serial.print("Server is running at ip: ");       
-    Serial.println(Ethernet.localIP());     
-    
-    name = my_findString("name");
-    
-    Serial.println( name );
+    Serial.println(Ethernet.localIP());
+
+
+    Wire.begin();
+
+    uint16_t error;
+    char errorMessage[256];
+
+    sdp.begin(Wire, SDP8XX_I2C_ADDRESS_0);
+
+    uint32_t productNumber;
+    uint8_t serialNumber[8];
+    uint8_t serialNumberSize = 8;
+
+    sdp.stopContinuousMeasurement();
+
+    error = sdp.readProductIdentifier(productNumber, serialNumber,
+                                      serialNumberSize);
+    if (error) {
+        Serial.print("Error trying to execute readProductIdentifier(): ");
+        errorToString(error, errorMessage, 256);
+        Serial.println(errorMessage);
+    } else {
+        Serial.print("ProductNumber: ");
+        Serial.print(productNumber);
+        Serial.println();
+        Serial.print("SerialNumber: ");
+        Serial.print("0x");
+        for (size_t i = 0; i < serialNumberSize; i++) {
+            Serial.print(serialNumber[i], HEX);
+        }
+        Serial.println();
+    }
+
+    error = sdp.startContinuousMeasurementWithDiffPressureTCompAndAveraging();
+
+    if (error) {
+        Serial.print(
+            "Error trying to execute "
+            "startContinuousMeasurementWithDiffPressureTCompAndAveraging(): ");
+        errorToString(error, errorMessage, 256);
+        Serial.println(errorMessage);
+    }
 }
 
 void loop()
@@ -227,7 +265,14 @@ void loop()
 
     error = sdp.readMeasurement(differentialPressure, temperature);
 
-    if ( ! error) {
+    if (error) {
+        Serial.print("Error trying to execute readMeasurement(): ");
+        errorToString(error, errorMessage, 256);
+        Serial.println(errorMessage);
+    } else {
+        Serial.print("DifferentialPressure[Pa]:");
+        Serial.print(differentialPressure);
+        Serial.println();
         return String( differentialPressure );
     }
 }
@@ -244,7 +289,14 @@ void loop()
 
     error = sdp.readMeasurement(differentialPressure, temperature);
 
-    if ( ! error) {
+    if (error) {
+        Serial.print("Error trying to execute readMeasurement(): ");
+        errorToString(error, errorMessage, 256);
+        Serial.println(errorMessage);
+    } else {
+        Serial.print("Temperature[°C]:");
+        Serial.print(temperature);
+        Serial.println();
         return String( temperature );
     }
 }
