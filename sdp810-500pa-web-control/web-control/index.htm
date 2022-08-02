@@ -26,8 +26,6 @@
         replace_element( "tagline", "getTagline" );
         replace_element( "macAddress", "getMacAddress" );
         replace_element( "sensorProduct", "getProductNumber");
-        replace_element( "sensorSerial", "getPressure" );
-        replace_element( "sensorTemperature", "getTemperature" );
     }
 
 	var pressure=30.24;
@@ -42,10 +40,10 @@
         xmlhttp.onreadystatechange = function () {
             if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                 var jsonObj = JSON.parse(xmlhttp.responseText);
-				document.getElementById("myPressure").innerHTML = jsonObj.pressure.toString();
-				document.getElementById("myTemperature").innerHTML = jsonObj.temperature.toString();				
-                pressure = parseInt(jsonObj.pressure.toString());
-                temperature = parseInt(jsonObj.temperature.toString());
+				document.getElementById("sensorPressure").innerHTML = jsonObj.pressure.toString();
+				document.getElementById("sensorTemperature").innerHTML = jsonObj.temperature.toString();				
+                pressure = parseFloat(jsonObj.pressure.toString());
+                temperature = parseFloat(jsonObj.temperature.toString());
                 
             }
         }
@@ -110,7 +108,7 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
                             </tr>
                             <tr>
                                 <th style="background: #eeeeee; color: #000000; padding: 0.5rem;">Differential Pressure</th>
-                                <td id="sensorSerial" style="padding: 0.5rem">00:00:00:00:00</td>
+                                <td id="sensorPressure" style="padding: 0.5rem">00:00:00:00:00</td>
                             </tr>
                             <tr>
                                 <th style="background: #333333; color: #ffffff; padding: 0.5rem;">Temperature</th>
@@ -125,9 +123,6 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
                 </li>
             </ul>
         </div>
-		<p>Differential Pressure =  <span id="myPressure"></span>  </p>
-		<p>Temperature = <span id="myTemperature"></span>  </p>
-
     </section>
     <footer id="footer" class="site-footer">
 
@@ -144,7 +139,7 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
                 renderTo: 'Canvas0',
                 width: 250, height: 250,
                 maxValue: 500,
-                valueFormat: { int: 2, dec: 2 },
+                valueFormat: { int: 1, dec: 2 },
                 glow: true,
                 units: 'Pa', title: 'Pressure',
                 majorTicks: ['0', '100', '200', '300', '400', '500'],
