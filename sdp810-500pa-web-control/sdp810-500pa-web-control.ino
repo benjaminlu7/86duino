@@ -42,7 +42,7 @@ Table of Content
  2.0 - Variables
 ========================================================================================================================================
 */
-#define debug 1
+#define debug 0
 #define spi_flash 0
 #define dhcp 0
 
@@ -180,7 +180,7 @@ void loop()
                                   if (StrContains(HTTP_req, "GET / ")  || StrContains(HTTP_req, "GET /index.htm")) {
 
                                         http200ok(client);
-                                        fp = fopen("/web/index.htm", "r");
+                                        fp = fopen("/index.htm", "r");
                                         char cc = fgetc(fp);
                                         while (cc != EOF) {
                                             client.write(cc);
