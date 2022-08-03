@@ -25,7 +25,7 @@
         replace_element( "title", "getTitle");
         replace_element( "tagline", "getTagline" );
         replace_element( "macAddress", "getMacAddress" );
-        replace_element( "sensorProduct", "getProductNumber");
+        replace_element( "ipAddress", "getIPAddress" );
     }
 
 	var pressure=30.24;
@@ -86,7 +86,7 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
         <div class="grid">
             <ul class="items" style="display: grid; grid-template-columns: 30% 70%; list-style-type: none; margin: 0; padding: 0;">
                 <li class="item">
-                    <h2 class="system-title">System Information</h2>
+                    <h2 class="system-title" style="margin: 0 0 0.5rem 0; padding: 0;">System Information</h2>
                     <table style="border-collapse: collapse; width: 100%;">
                         <tbody>
                             <tr>
@@ -94,25 +94,25 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
                                 <td style="padding: 0.5rem">86Duino Zero</td>
                             </tr>
                             <tr>
-                                <th style="background: #eeeeee; color: #000000; padding: 0.5rem;">Mac Address</th>
-                                <td id="macAddress" style="padding: 0.5rem">00:00:00:00:00</td>
+                                <th style="background: #eeeeee; color: #000000; padding: 0.5rem; width: 50%">Mac Address</th>
+                                <td id="macAddress" style="padding: 0.5rem; width: 50%;"></td>
+                            </tr>
+                            <tr>
+                                <th style="background: #333333; color: #ffffff; padding: 0.5rem;">IP Address</th>
+                                <td id="ipAddress" style="padding: 0.5rem"></td>
                             </tr>
                         </tbody>
                     </table>
-                    <h2 class="system-title">SDP810-500pa Information</h2>
+                    <h2 class="system-title" style="margin: 2rem 0 0.5rem 0; padding: 0;">SDP810-500pa Information</h2>
                     <table style="border-collapse: collapse; width: 100%;">
                         <tbody>
                             <tr>
-                                <th style="background: #333333; color: #ffffff; padding: 0.5rem;">Product Number</th>
-                                <td id="sensorProduct" style="padding: 0.5rem">86Duino Zero</td>
+                                <th style="background: #333333; color: #ffffff; padding: 0.5rem; width: 55%">Differential Pressure</th>
+                                <td id="sensorPressure" style="padding: 0.5rem"></td>
                             </tr>
                             <tr>
-                                <th style="background: #eeeeee; color: #000000; padding: 0.5rem;">Differential Pressure</th>
-                                <td id="sensorPressure" style="padding: 0.5rem">00:00:00:00:00</td>
-                            </tr>
-                            <tr>
-                                <th style="background: #333333; color: #ffffff; padding: 0.5rem;">Temperature</th>
-                                <td id="sensorTemperature" style="padding: 0.5rem">00:00:00:00:00</td>
+                                <th style="background: #eeeeee; color: #000000; padding: 0.5rem;">Temperature</th>
+                                <td id="sensorTemperature" style="padding: 0.5rem; width: 45%"></td>
                             </tr>
                         </tbody>
                     </table>

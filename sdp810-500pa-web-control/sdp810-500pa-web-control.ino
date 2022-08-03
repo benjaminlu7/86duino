@@ -20,9 +20,6 @@ Table of Content
  2.0 - Variables
  3.0 - Setup
  4.0 - Loop
- 5.0 - redLED Checkbox
- 6.0 - yellowLED Checkbox
- 7.0 - greenLED Checkbox
 ========================================================================================================================================
 */
 
@@ -45,7 +42,7 @@ Table of Content
  2.0 - Variables
 ========================================================================================================================================
 */
-#define debug 0
+#define debug 1
 #define spi_flash 0
 #define dhcp 0
 
@@ -66,8 +63,8 @@ char HTTP_req[REQ_BUF_SZ] = {0};
 char req_index = 0;
 char spf[50];
 
-char * commands[] = { "getSensors", "getTitle", "getTagline", "getMacAddress", "getIPAddress", "getProductNumber", "getSerialNumber", "getPressure", "getTemperature"};
-enum {getSensors, getTitle, getTagline, getMacAddress, getIPAddress, getProductNumber, getSerialNumber, getPressure, getTemperature};
+char * commands[] = { "getSensors", "getTitle", "getTagline", "getMacAddress", "getIPAddress", "getPressure", "getTemperature"};
+enum {getSensors, getTitle, getTagline, getMacAddress, getIPAddress, getPressure, getTemperature};
 const int commands_count=sizeof(commands)/sizeof(commands[0]);
 
 byte *mac = Ethernet.localMAC();
@@ -115,10 +112,6 @@ void setup() {
     
     Serial.print("Server is running at ip: ");       
     Serial.println(Ethernet.localIP());     
-    
-    name = my_findString("name");
-    
-    Serial.println( name );
 }
 
 void loop()
@@ -170,13 +163,7 @@ void loop()
                             sprintf( spf, "{\"value\":\"%s\"}\n", displayIPAddress(Ethernet.localIP()).c_str() );  
                             client.print(spf);
                             break;
-
-/*
-                          case getProductNumber :
-                            sprintf( spf, "{\"value\":\"%d\"}\n", displayProductNumber() );  
-                            client.print(spf);
-                            break;
-*/
+                            
                           case getPressure :
                             read_DiffPressure_Temp(&differentialPressure, &temperature);
                             sprintf( spf, "{\"value\":\"%d.%02d\"}\n", (int)differentialPressure, (int)(fabsf(differentialPressure)*100)%100 );  
@@ -231,7 +218,6 @@ void read_DiffPressure_Temp(float* differentialPressure, float* temperature) {
   *temperature=tmp;
 }
 
-
 String displayMacAddress(byte *address) {
     return  String(address[0], HEX) + "0:" + 
             String(address[1], HEX) + ":" + 
@@ -241,9 +227,9 @@ String displayMacAddress(byte *address) {
 }
 
 String displayIPAddress(IPAddress address) {
-    return  String(address[0]) + "0:" + 
-            String(address[1]) + ":" + 
-            String(address[2]) + ":" + 
+    return  String(address[0]) + "." + 
+            String(address[1]) + "." + 
+            String(address[2]) + "." + 
             String(address[3]);
 }
 
