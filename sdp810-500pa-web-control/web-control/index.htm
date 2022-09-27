@@ -111,16 +111,28 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
                                 <td id="sensorPressure" style="padding: 0.5rem"></td>
                             </tr>
                             <tr>
-                                <th style="background: #eeeeee; color: #000000; padding: 0.5rem;">Temperature</th>
+                                <th style="background: #eeeeee; color: #000000; padding: 0.5rem;">Differential Pressure</th>
                                 <td id="sensorTemperature" style="padding: 0.5rem; width: 45%"></td>
                             </tr>
                         </tbody>
                     </table>
                 </li>
                 <li class="item" style="text-align: center;">
-                    <canvas id="Canvas0"></canvas>
-                    <canvas id="Canvas1"></canvas>
+                    <table style="border-collapse: collapse; width: 100%;">
+                        <tbody>
+                            <tr>
+                                <td style="width: 55%">
+                                    <canvas id="Canvas0"></canvas>
+                                    <h2>SDP810-500pa</h2>
+                                </td>
+                                <td style="padding: 0.5rem"><canvas id="Canvas1"></canvas>
+                                <h2>SDP811-500pa</h2>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </li>
+
             </ul>
         </div>
     </section>
@@ -153,13 +165,13 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
             var gauge1 = new Gauge({
                 renderTo: 'Canvas1',
                 width: 250, height: 250,
-                maxValue: 100,
+                maxValue: 500,
                 valueFormat: { int: 2, dec: 2 },
                 glow: true,
-                units: '°C', title: 'Pressure',
+                units: 'Pa', title: 'Pressure',
                 majorTicks: ['0', '100', '200', '300', '400', '500'],
                 strokeTicks: true,
-                highlights: [{from: 0,to: 30,color: 'PaleGreen'}, {from: 30,to: 70,color: 'Yellow'}, {from: 70,to: 100,color: 'Red'}],
+                highlights: [{from: 0,to: 100,color: 'LightGreen'}, {from: 100,to: 400,color: 'Yellow'}, {from: 400,to: 500,color: 'Red'}],
                 animation: {delay: 10, duration: 300,fn: 'bounce' }
             });
             gauge1.onready = function () { setInterval(function () { gauge1.setValue(temperature); }, 1000); };

@@ -80,6 +80,7 @@ int ip4 = my_findInt( "ip4" );
 IPAddress ip(ip1, ip2, ip3, ip4);
 
 SensirionI2CSdp sdp;
+SensirionI2CSdp sdp1;
 
 void setup() {
     Serial.begin(115200);
@@ -93,7 +94,12 @@ void setup() {
     Wire.begin();
     sdp.begin(Wire, SDP8XX_I2C_ADDRESS_0);
     sdp.startContinuousMeasurementWithDiffPressureTCompAndAveraging();
-//====================================================================      
+//====================================================================     
+
+//=============== SDP800 init =========================================
+    sdp1.begin(Wire, SDP8XX_I2C_ADDRESS_1);
+    sdp1.startContinuousMeasurementWithDiffPressureTCompAndAveraging();
+//====================================================================     
     
     #if spi_flash
         // show whether it's boot from SD or internal SPI flash
