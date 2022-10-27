@@ -30,9 +30,11 @@
 
 	var pressure=30.24;
 	var temperature=30.24;
-    window.setInterval(function () {GetSensors();}, 1000);
 
-    function GetSensors() {
+    window.setInterval(function () {getPrimarySensor();}, 1000);
+    window.setInterval(function () {getSecondarySensor();}, 1000);
+
+    function getPrimarySensor() {
         nocache = "&nocache=" + Math.random() * 1000000;
         var xmlhttp;
         xmlhttp = new XMLHttpRequest();
@@ -40,14 +42,29 @@
         xmlhttp.onreadystatechange = function () {
             if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                 var jsonObj = JSON.parse(xmlhttp.responseText);
-				document.getElementById("sensorPressure").innerHTML = jsonObj.pressure.toString();
-				document.getElementById("sensorTemperature").innerHTML = jsonObj.temperature.toString();				
-                pressure = parseFloat(jsonObj.pressure.toString());
-                temperature = parseFloat(jsonObj.temperature.toString());
+				document.getElementById("getPrimaryPressure").innerHTML = jsonObj.pressure.toString();			
+                primaryPressure = parseFloat(jsonObj.pressure.toString());
                 
             }
         }
-        xmlhttp.open("GET", "getSensors" + nocache, true);
+        xmlhttp.open("GET", "getPrimarySensor" + nocache, true);
+        xmlhttp.send();
+    }
+
+    function getSecondarySensor() {
+        nocache = "&nocache=" + Math.random() * 1000000;
+        var xmlhttp;
+        xmlhttp = new XMLHttpRequest();
+
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                var jsonObj = JSON.parse(xmlhttp.responseText);
+				document.getElementById("getSecondaryPressure").innerHTML = jsonObj.pressure.toString();			
+                secondaryPressure = parseFloat(jsonObj.pressure.toString());
+                
+            }
+        }
+        xmlhttp.open("GET", "getSecondarySensor" + nocache, true);
         xmlhttp.send();
     }
 </script>
@@ -103,23 +120,38 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
                             </tr>
                         </tbody>
                     </table>
-                    <h2 class="system-title" style="margin: 2rem 0 0.5rem 0; padding: 0;">SDP810-500pa Information</h2>
+                </li>
+                <li class="item" style="text-align: center;">
                     <table style="border-collapse: collapse; width: 100%;">
                         <tbody>
                             <tr>
-                                <th style="background: #333333; color: #ffffff; padding: 0.5rem; width: 55%">Differential Pressure</th>
-                                <td id="sensorPressure" style="padding: 0.5rem"></td>
-                            </tr>
-                            <tr>
-                                <th style="background: #eeeeee; color: #000000; padding: 0.5rem;">Temperature</th>
-                                <td id="sensorTemperature" style="padding: 0.5rem; width: 45%"></td>
+                                <td>
+                                    <canvas id="Canvas0"></canvas>
+                                    <h1>SDP810-500pa</h1>
+                                    <table style="display: none; border-collapse: collapse; width: 100%;">
+                                        <tbody>
+                                            <tr>
+                                                <th style="background: #333333; color: #ffffff; padding: 0.5rem; text-align: left; width: 55%">Differential Pressure</th>
+                                                <td id="getPrimaryPressure" style="padding: 0.5rem"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                                <td>
+                                    <canvas id="Canvas1"></canvas>
+                                    <h1>SDP811-500pa</h1>
+                                    <table style="display: none; border-collapse: collapse; width: 100%;">
+                                        <tbody>
+                                            <tr>
+                                                <th style="background: #333333; color: #ffffff; padding: 0.5rem; width: 55%">Differential Pressure</th>
+                                                <td id="getSecondaryPressure" style="padding: 0.5rem"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
-                </li>
-                <li class="item" style="text-align: center;">
-                    <canvas id="Canvas0"></canvas>
-                    <canvas id="Canvas1"></canvas>
                 </li>
             </ul>
         </div>
@@ -147,22 +179,22 @@ k.getAttribute("data-onready")&&(e.onready=function(){eval(this.config.renderTo.
                 highlights: [{from: 0,to: 100,color: 'PaleGreen'}, {from: 100,to: 400,color: 'Khaki'}, {from: 400,to: 500,color: 'LightSalmon'}],
                 animation: {delay: 10, duration: 300,fn: 'bounce' }
             });
-            gauge0.onready = function () { setInterval(function () { gauge0.setValue(pressure); }, 1000); };
+            gauge0.onready = function () { setInterval(function () { gauge0.setValue(primaryPressure); }, 1000); };
             gauge0.draw();
             
             var gauge1 = new Gauge({
                 renderTo: 'Canvas1',
                 width: 250, height: 250,
-                maxValue: 100,
-                valueFormat: { int: 2, dec: 2 },
+                maxValue: 500,
+                valueFormat: { int: 1, dec: 2 },
                 glow: true,
-                units: '°C', title: 'Temperature',
-                majorTicks: ['0', '20', '40', '60', '80', '100'],
+                units: 'Pa', title: 'Pressure',
+                majorTicks: ['0', '100', '200', '300', '400', '500'],
                 strokeTicks: true,
-                highlights: [{from: 0,to: 30,color: 'PaleGreen'}, {from: 30,to: 70,color: 'Yellow'}, {from: 70,to: 100,color: 'Red'}],
+                highlights: [{from: 0,to: 100,color: 'PaleGreen'}, {from: 100,to: 400,color: 'Khaki'}, {from: 400,to: 500,color: 'LightSalmon'}],
                 animation: {delay: 10, duration: 300,fn: 'bounce' }
             });
-            gauge1.onready = function () { setInterval(function () { gauge1.setValue(temperature); }, 1000); };
+            gauge1.onready = function () { setInterval(function () { gauge1.setValue(secondaryPressure); }, 1000); };
             gauge1.draw();
             </script>
 </body>

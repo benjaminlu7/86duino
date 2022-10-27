@@ -63,8 +63,8 @@ char HTTP_req[REQ_BUF_SZ] = {0};
 char req_index = 0;
 char spf[50];
 
-char * commands[] = { "getSensors", "getTitle", "getTagline", "getMacAddress", "getIPAddress", "getPressure", "getTemperature"};
-enum {getSensors, getTitle, getTagline, getMacAddress, getIPAddress, getPressure, getTemperature};
+char * commands[] = { "getTitle", "getTagline", "getMacAddress", "getIPAddress", "getPrimarySensor", "getSecondarySensor" };
+enum { getTitle, getTagline, getMacAddress, getIPAddress, getPrimarySensor, getSecondarySensor };
 const int commands_count=sizeof(commands)/sizeof(commands[0]);
 
 byte *mac = Ethernet.localMAC();
@@ -80,6 +80,7 @@ int ip4 = my_findInt( "ip4" );
 IPAddress ip(ip1, ip2, ip3, ip4);
 
 SensirionI2CSdp sdp;
+SensirionI2CSdp sdp1;
 
 void setup() {
     Serial.begin(115200);
@@ -92,7 +93,9 @@ void setup() {
 //=============== SDP800 init =========================================
     Wire.begin();
     sdp.begin(Wire, SDP8XX_I2C_ADDRESS_0);
+    sdp1.begin(Wire, SDP8XX_I2C_ADDRESS_1);
     sdp.startContinuousMeasurementWithDiffPressureTCompAndAveraging();
+    sdp1.startContinuousMeasurementWithDiffPressureTCompAndAveraging();
 //====================================================================      
     
     #if spi_flash
@@ -137,12 +140,6 @@ void loop()
                     cmd=findCommand (HTTP_req);
                     switch(cmd) {
 
-                        case  getSensors :
-                                        read_DiffPressure_Temp(&differentialPressure, &temperature);
-                                        sprintf(spf, "{\"pressure\":\"%d.%02d\",\"temperature\":\"%d.%02d\"}\n",(int)differentialPressure, (int)(fabsf(differentialPressure)*100)%100, (int)temperature, (int)(fabsf(temperature)*100)%100 );
-                                        client.print(spf);
-                                        break;
-
                         case getTitle :
                                         
                                         sprintf(spf, "{\"value\":\"%s\"}\n", name.c_str()); 
@@ -164,17 +161,17 @@ void loop()
                             client.print(spf);
                             break;
                             
-                          case getPressure :
-                            read_DiffPressure_Temp(&differentialPressure, &temperature);
-                            sprintf( spf, "{\"value\":\"%d.%02d\"}\n", (int)differentialPressure, (int)(fabsf(differentialPressure)*100)%100 );  
-                            client.print(spf);
-                            break;
+                        case getPrimarySensor:
+                                        readPrimarySensor(&differentialPressure, &temperature);
+                                        sprintf(spf, "{\"pressure\":\"%d.%02d\",\"temperature\":\"%d.%02d\"}\n",(int)differentialPressure, (int)(fabsf(differentialPressure)*100)%100, (int)temperature, (int)(fabsf(temperature)*100)%100 );
+                                        client.print(spf);
+                                        break;
 
-                          case getTemperature :
-                            read_DiffPressure_Temp(&differentialPressure, &temperature);
-                            sprintf( spf, "{\"value\":\"%d.%02d\"}\n", (int)temperature, (int)(fabsf(temperature)*100)%100 );  
-                            client.print(spf);
-                            break;
+                        case getSecondarySensor:
+                                        readSecondarySensor(&differentialPressure, &temperature);
+                                        sprintf(spf, "{\"pressure\":\"%d.%02d\",\"temperature\":\"%d.%02d\"}\n",(int)differentialPressure, (int)(fabsf(differentialPressure)*100)%100, (int)temperature, (int)(fabsf(temperature)*100)%100 );
+                                        client.print(spf);
+                                        break;
 
                           default :
                                   if (StrContains(HTTP_req, "GET / ")  || StrContains(HTTP_req, "GET /index.htm")) {
@@ -211,9 +208,16 @@ void loop()
     
 }
 
-void read_DiffPressure_Temp(float* differentialPressure, float* temperature) {
+void readPrimarySensor(float* differentialPressure, float* temperature) {
   float dp, tmp;
   sdp.readMeasurement(dp, tmp);
+  *differentialPressure=dp;
+  *temperature=tmp;
+}
+
+void readSecondarySensor(float* differentialPressure, float* temperature) {
+  float dp, tmp;
+  sdp1.readMeasurement(dp, tmp);
   *differentialPressure=dp;
   *temperature=tmp;
 }
